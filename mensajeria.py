@@ -56,41 +56,57 @@ print("sigue")
 #Cierra el socket
 client_socket.close()
 
-#Defino proceso emisor, le paso como argumentos el ip y el mensaje a enviar
-def emisor(ip_receptor, msg_emisor):
-    emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#Defino proceso emisor, le paso como argumentos el mensaje a enviar
+def emisor():
     while True:
-        emisor_socket.connect((ip_receptor, msg_port))
         time.sleep(1)
-        fecha_actual = time.strftime("%Y-%m-%d %H:%M")
-        emisor_socket.send(msg_emisor + fecha_actual.encode())
+
+ #   print()
+ #   print(msg)
+ #   indice_espacio = msg.find(" ")
+
+    # Extraer la IP y el resto del mensaje
+#    ip = msg[:indice_espacio]
+#    resto_mensaje = msg[indice_espacio+1:]
+#    print("Dirección IP:", ip)
+#    print("Resto del mensaje:", resto_mensaje)
+#    emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#    while True:
+#        emisor_socket.connect((ip, msg_port))
+#        time.sleep(1)
+#        fecha_actual = time.strftime("%Y-%m-%d %H:%M")
+#        mensaje = msg_emisor + fecha_actual
+#        emisor_socket.send(mensaje.encode())
 
 
 def receptor():
     receptor_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    receptor_socket.bind(('', msg_port))
 
-    nombre_host = socket.gethostname()
-    ip = socket.gethostbyname(nombre_host)
-
-    receptor_socket.bind((ip, msg_port))
+#    nombre_host = socket.gethostname()
+#    ip =socket.gethostbyname(nombre_host)
 
     receptor_socket.listen(5)
-
-    emisor_socket, emisor_address = receptor_socket.accept()
     while True:
+        emisor_socket, emisor_address = receptor_socket.accept()
         msg = emisor_socket.recv(1024).decode('utf-8').strip()
-        print(ip + msg)
+        print(msg)
+        emisor_socket.close()
+
 
 print("ASASASDD")
-# Crear procesos para receptor y emisor
-ip_receptor= input("escriba IP: ")
-msg_emisor = input("escriba su mensaje: ")
 
+#msg_emisor = input("escriba su mensaje: ")
+
+# Crear procesos para receptor y emisor
 proceso_receptor = multiprocessing.Process(target=receptor)
-proceso_emisor = multiprocessing.Process(target=emisor, args=(ip_receptor, msg_emisor))
+proceso_emisor = multiprocessing.Process(target=emisor)
 print("2")
 # Iniciar los procesos
 proceso_receptor.start()
 proceso_emisor.start()
 print("3")
+
+while True:
+     time.sleep(1)
 #client_socket.close()
