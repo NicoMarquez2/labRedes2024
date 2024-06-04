@@ -58,18 +58,19 @@ client_socket.close()
 
 #Defino proceso emisor
 def emisor():
-    ip = ("127.0.0.1", msg_port)
     while True:
         msg = input()
-        print(msg)
-        emisor_socket.sendto(msg.encode("utf-8"), ip)
+        ip, mensaje = msg.split(' ', 1)
+        ip_receptor = (ip, msg_port)
+        emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
         time.sleep(1)
 
 #Defino proceso receptor
 def receptor():
     while True:
-        msg = emisor_socket.recvfrom(1024)
-        print(msg)
+        msg, adress = emisor_socket.recvfrom(1024)
+        mensaje = msg.decode("utf-8")
+        print(f"{adress[0]} {mensaje}")
 
 emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 emisor_socket.bind(('', msg_port))
