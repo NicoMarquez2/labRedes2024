@@ -57,57 +57,25 @@ print("sigue")
 #Cierra el socket
 client_socket.close()
 
-#Defino proceso emisor, le paso como argumentos el mensaje a enviar
+#Defino proceso emisor
 def emisor():
-    emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    emisor_socket.bind(('', msg_port))
-    ip = "127.0.0.1"
+    ip = ("127.0.0.1", msg_port)
     while True:
         msg = input()
         print(msg)
         emisor_socket.sendto(msg.encode("utf-8"), ip)
         time.sleep(1)
 
- #   print()
- #   print(msg)
- #   indice_espacio = msg.find(" ")
-
-    # Extraer la IP y el resto del mensaje
-#    ip = msg[:indice_espacio]
-#    resto_mensaje = msg[indice_espacio+1:]
-#    print("Dirección IP:", ip)
-#    print("Resto del mensaje:", resto_mensaje)
-#    emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#    while True:
-#        emisor_socket.connect((ip, msg_port))
-#        time.sleep(1)
-#        fecha_actual = time.strftime("%Y-%m-%d %H:%M")
-#        mensaje = msg_emisor + fecha_actual
-#        emisor_socket.send(mensaje.encode())
-
-
+#Defino proceso receptor
 def receptor():
-    receptor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    receptor_socket.bind(('', msg_port))
-
-#    nombre_host = socket.gethostname()
-#    ip =socket.gethostbyname(nombre_host)
-
-#    receptor_socket.listen(5)
     while True:
-#        emisor_socket, emisor_address = receptor_socket.accept()
-        msg = receptor_socket.recvfrom(1024)
+        msg = emisor_socket.recvfrom(1024)
         print(msg)
-#        receptor_socket.close()
 
-
-print("ASASASDD")
-
-#msg_emisor = input("escriba su mensaje: ")
+emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+emisor_socket.bind(('', msg_port))
 
 # Crear procesos para receptor y emisor
-#proceso_receptor = multiprocessing.Process(target=receptor)
-#proceso_emisor = multiprocessing.Process(target=emisor)
 proceso_emisor = threading.Thread(target=emisor)
 proceso_receptor = threading.Thread(target=receptor)
 print("2")
