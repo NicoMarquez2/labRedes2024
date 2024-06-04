@@ -3,6 +3,7 @@ import socket
 import hashlib
 import threading
 import time
+from datetime import datetime
 
 # Guarda los parametros en consola 
 msg_port= int(sys.argv[1])
@@ -61,7 +62,9 @@ def emisor():
     while True:
         msg = input()
         ip, mensaje = msg.split(' ', 1)
-        ip_receptor = (ip, msg_port)
+        ip_r = socket.gethostbyname(ip)
+        ip_receptor = (ip_r, msg_port)
+        mensaje = f"{user} dice: {mensaje}"
         emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
         time.sleep(1)
 
@@ -70,7 +73,8 @@ def receptor():
     while True:
         msg, adress = emisor_socket.recvfrom(1024)
         mensaje = msg.decode("utf-8")
-        print(f"{adress[0]} {mensaje}")
+        fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
+        print(f"[{fecha}] {adress[0]} {mensaje}")
 
 emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 emisor_socket.bind(('', msg_port))
