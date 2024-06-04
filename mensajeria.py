@@ -62,11 +62,18 @@ def emisor():
     while True:
         msg = input()
         ip, mensaje = msg.split(' ', 1)
-        ip_r = socket.gethostbyname(ip)
-        ip_receptor = (ip_r, msg_port)
-        mensaje = f"{user} dice: {mensaje}"
-        emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
-        time.sleep(1)
+        if ip == "*":
+            emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            mensaje = f"{user} dice: {mensaje}"
+            ip_receptor = ('<broadcast>', msg_port)
+            emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
+            emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
+        else:
+            ip_r = socket.gethostbyname(ip)
+            ip_receptor = (ip_r, msg_port)
+            mensaje = f"{user} dice: {mensaje}"
+            emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
+            time.sleep(1)
 
 #Defino proceso receptor
 def receptor():
