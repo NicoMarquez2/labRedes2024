@@ -2,6 +2,7 @@ import sys
 import socket
 import hashlib
 import multiprocessing
+import threading
 import time
 
 # Guarda los parametros en consola 
@@ -58,7 +59,13 @@ client_socket.close()
 
 #Defino proceso emisor, le paso como argumentos el mensaje a enviar
 def emisor():
+    emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    emisor_socket.bind(('', msg_port))
+    ip = "127.0.0.1"
     while True:
+        msg = input()
+        print(msg)
+        emisor_socket.sendto(msg.encode("utf-8"), ip)
         time.sleep(1)
 
  #   print()
@@ -80,18 +87,18 @@ def emisor():
 
 
 def receptor():
-    receptor_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    receptor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     receptor_socket.bind(('', msg_port))
 
 #    nombre_host = socket.gethostname()
 #    ip =socket.gethostbyname(nombre_host)
 
-    receptor_socket.listen(5)
+#    receptor_socket.listen(5)
     while True:
-        emisor_socket, emisor_address = receptor_socket.accept()
-        msg = emisor_socket.recv(1024).decode('utf-8').strip()
+#        emisor_socket, emisor_address = receptor_socket.accept()
+        msg = receptor_socket.recvfrom(1024)
         print(msg)
-        emisor_socket.close()
+#        receptor_socket.close()
 
 
 print("ASASASDD")
@@ -99,8 +106,10 @@ print("ASASASDD")
 #msg_emisor = input("escriba su mensaje: ")
 
 # Crear procesos para receptor y emisor
-proceso_receptor = multiprocessing.Process(target=receptor)
-proceso_emisor = multiprocessing.Process(target=emisor)
+#proceso_receptor = multiprocessing.Process(target=receptor)
+#proceso_emisor = multiprocessing.Process(target=emisor)
+proceso_emisor = threading.Thread(target=emisor)
+proceso_receptor = threading.Thread(target=receptor)
 print("2")
 # Iniciar los procesos
 proceso_receptor.start()
