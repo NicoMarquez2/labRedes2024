@@ -4,8 +4,27 @@ import hashlib
 import threading
 import time
 from datetime import datetime
+import signal
 
-# Guarda los parametros en consola 
+# Define una función de manejador para la señal SIGINT
+salir = False
+def sigint_handler(signum, frame):
+    global salir
+    salir = True
+    print("entro")
+    emisor_socket.close()
+    print("1")
+    proceso_receptor.join(timeout=1)
+    print("2")
+    proceso_emisor.join(timeout=1)
+    print('\nCTRL + C Recibido.... Cerrando Sesión')
+    sys.exit()
+
+# Asigna el manejador para la señal SIGINT y SIGTERM
+signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGTERM, sigint_handler)
+
+# Guarda los parametros en consola
 msg_port= int(sys.argv[1])
 auth_ip=sys.argv[2]
 auth_port=int(sys.argv[3])
@@ -52,14 +71,13 @@ elif respuesta != "SI":
 else:
     usr=client_socket.recv(1024).decode('utf-8').strip()
     print("Bienvenido " + usr)
-print("sigue")
 
 #Cierra el socket
 client_socket.close()
 
 #Defino proceso emisor
 def emisor():
-    while True:
+    while not salir:
         msg = input()
         ip, mensaje = msg.split(' ', 1)
         if ip == "*":
@@ -74,14 +92,18 @@ def emisor():
             mensaje = f"{user} dice: {mensaje}"
             emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
             time.sleep(1)
+        if salir:  # Verifica si se debe salir después de cada recepción
+            break
 
 #Defino proceso receptor
 def receptor():
-    while True:
+    while not salir:
         msg, adress = emisor_socket.recvfrom(1024)
         mensaje = msg.decode("utf-8")
         fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
         print(f"[{fecha}] {adress[0]} {mensaje}")
+        if salir:  # Verifica si se debe salir después de cada recepción
+            break
 
 emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 emisor_socket.bind(('', msg_port))
@@ -89,12 +111,8 @@ emisor_socket.bind(('', msg_port))
 # Crear procesos para receptor y emisor
 proceso_emisor = threading.Thread(target=emisor)
 proceso_receptor = threading.Thread(target=receptor)
-print("2")
+
 # Iniciar los procesos
 proceso_receptor.start()
 proceso_emisor.start()
-print("3")
-
-while True:
-     time.sleep(1)
 #client_socket.close()
