@@ -5,30 +5,32 @@ import threading
 import time
 from datetime import datetime
 import signal
-
+import select
 # Define una función de manejador para la señal SIGINT
 salir = False
 def sigint_handler(signum, frame):
     global salir
     salir = True
-    print("entro")
-    emisor_socket.close()
-    print("1")
-    proceso_receptor.join(timeout=1)
-    print("2")
-    proceso_emisor.join(timeout=1)
-    print('\nCTRL + C Recibido.... Cerrando Sesión')
-    sys.exit()
+
+def obtener_input(timeout):
+    inputs, _, _ = select.select([sys.stdin], [], [], timeout)
+    if inputs:
+        return sys.stdin.readline().strip()
+    else:
+        return None
 
 # Asigna el manejador para la señal SIGINT y SIGTERM
 signal.signal(signal.SIGINT, sigint_handler)
 signal.signal(signal.SIGTERM, sigint_handler)
 
 # Guarda los parametros en consola
-msg_port= int(sys.argv[1])
-auth_ip=sys.argv[2]
-auth_port=int(sys.argv[3])
+#msg_port= int(sys.argv[1])
+#auth_ip=sys.argv[2]
+#auth_port=int(sys.argv[3])
 
+msg_port = 45743
+auth_ip = "ti.esi.edu.uy"
+auth_port = 33
 # Crea el socket 
 client_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -78,32 +80,38 @@ client_socket.close()
 #Defino proceso emisor
 def emisor():
     while not salir:
-        msg = input()
-        ip, mensaje = msg.split(' ', 1)
-        if ip == "*":
-            emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            mensaje = f"{user} dice: {mensaje}"
-            ip_receptor = ('<broadcast>', msg_port)
-            emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
-            emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
-        else:
-            ip_r = socket.gethostbyname(ip)
-            ip_receptor = (ip_r, msg_port)
-            mensaje = f"{user} dice: {mensaje}"
-            emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
-            time.sleep(1)
-        if salir:  # Verifica si se debe salir después de cada recepción
+        if salir:
             break
+        msg = obtener_input(1)
+        if msg is None:  # No se recibió entrada
+            continue
+        else:
+            ip, mensaje = msg.split(' ', 1)
+            if ip == "*":
+                emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                mensaje = f"{user} dice: {mensaje}"
+                ip_receptor = ('<broadcast>', msg_port)
+                emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
+                emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
+            else:
+                ip_r = socket.gethostbyname(ip)
+                ip_receptor = (ip_r, msg_port)
+                mensaje = f"{user} dice: {mensaje}"
+                emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
+                time.sleep(1)
 
 #Defino proceso receptor
 def receptor():
     while not salir:
+        if salir:
+            break
         msg, adress = emisor_socket.recvfrom(1024)
         mensaje = msg.decode("utf-8")
         fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
-        print(f"[{fecha}] {adress[0]} {mensaje}")
-        if salir:  # Verifica si se debe salir después de cada recepción
-            break
+        if mensaje == "5eb379cd7ffa79b66cc5007c0cf4ae67":
+            print("CTRL+C recibido... Cerrando sesion")
+        else:
+            print(f"[{fecha}] {adress[0]} {mensaje}")
 
 emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 emisor_socket.bind(('', msg_port))
@@ -115,4 +123,16 @@ proceso_receptor = threading.Thread(target=receptor)
 # Iniciar los procesos
 proceso_receptor.start()
 proceso_emisor.start()
+
+while (not salir):
+    time.sleep(1)
+    if salir:
+        break
+
+ip_receptor = ("localhost", msg_port)
+emisor_socket.sendto("5eb379cd7ffa79b66cc5007c0cf4ae67".encode("utf-8"), ip_receptor)
+proceso_receptor.join(timeout= 1)
+proceso_emisor.join(timeout= 1)
+emisor_socket.close()
+sys.exit()
 #client_socket.close()
