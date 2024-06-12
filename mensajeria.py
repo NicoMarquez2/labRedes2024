@@ -24,13 +24,10 @@ signal.signal(signal.SIGINT, sigint_handler)
 signal.signal(signal.SIGTERM, sigint_handler)
 
 # Guarda los parametros en consola
-#msg_port= int(sys.argv[1])
-#auth_ip=sys.argv[2]
-#auth_port=int(sys.argv[3])
+msg_port= int(sys.argv[1])
+auth_ip=sys.argv[2]
+auth_port=int(sys.argv[3])
 
-msg_port = 45743
-auth_ip = "ti.esi.edu.uy"
-auth_port = 33
 # Crea el socket 
 client_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
