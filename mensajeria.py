@@ -106,7 +106,7 @@ def receptor():
         mensaje = msg.decode("utf-8")
         fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
         if mensaje == "5eb379cd7ffa79b66cc5007c0cf4ae67":
-            print("CTRL+C recibido... Cerrando sesion")
+            print("\rCTRL+C recibido... Cerrando sesion")
         else:
             print(f"[{fecha}] {adress[0]} {mensaje}")
 
