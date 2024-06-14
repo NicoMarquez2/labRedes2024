@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 import signal
 import select
+import os
 # Define una función de manejador para la señal SIGINT
 salir = False
 def sigint_handler(signum, frame):
@@ -28,6 +29,7 @@ msg_port= int(sys.argv[1])
 auth_ip=sys.argv[2]
 auth_port=int(sys.argv[3])
 
+chunk_tamano=1024
 # Crea el socket 
 client_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -84,18 +86,37 @@ def emisor():
             continue
         else:
             ip, mensaje = msg.split(' ', 1)
-            if ip == "*":
-                emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                mensaje = f"{user} dice: {mensaje}"
-                ip_receptor = ('<broadcast>', msg_port)
-                emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
-                emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
+            if ("&file" in mensaje):
+                operacion,archivo= mensaje.split(' ', 1)
+                archivo_b= open(archivo, "rb")
+                tamano_archivo= os.path.getsize(archivo)
+                if ip == "*":
+                    while True:
+                        chunk = archivo_b.read(chunk_tamano)  
+                        if not chunk:
+                            break
+                        emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                        ip_receptor = ('<broadcast>', msg_port)
+                        msg= b'&file' + b' ' + archivo.encode('utf-8') + b' ' + chunk
+                        emisor_socket.sendto(msg, ip_receptor)
+                    msg= b'&file' + b' ' + archivo.encode('utf-8') + b' ' + b'Final'
+                    emisor_socket.sendto(msg, ip_receptor)
+                    emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
+                else:
+                    print()
             else:
-                ip_r = socket.gethostbyname(ip)
-                ip_receptor = (ip_r, msg_port)
-                mensaje = f"{user} dice: {mensaje}"
-                emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
-                time.sleep(1)
+                if ip == "*":
+                    emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    mensaje = f"{user} dice: {mensaje}"
+                    ip_receptor = ('<broadcast>', msg_port)
+                    emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
+                    emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
+                else:
+                    ip_r = socket.gethostbyname(ip)
+                    ip_receptor = (ip_r, msg_port)
+                    mensaje = f"{user} dice: {mensaje}"
+                    emisor_socket.sendto(mensaje.encode("utf-8"), ip_receptor)
+                    time.sleep(1)
 
 #Defino proceso receptor
 def receptor():
@@ -104,11 +125,21 @@ def receptor():
             break
         msg, adress = emisor_socket.recvfrom(1024)
         mensaje = msg.decode("utf-8")
-        fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
-        if mensaje == "5eb379cd7ffa79b66cc5007c0cf4ae67":
-            print("\rCTRL+C recibido... Cerrando sesion")
+        if "&file" in mensaje:
+            tipo,msg = mensaje.split(' ', 1)
+            archivo,chunk=msg.split(' ', 1)
+            archivo_destino_abierto = open(archivo, 'wb')
+            if(chunk != "Final"):
+                chunk2= chunk.encode("utf-8")
+                archivo_destino_abierto.write(chunk2)
+            else:
+                archivo_destino_abierto.close()
         else:
-            print(f"[{fecha}] {adress[0]} {mensaje}")
+            fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
+            if mensaje == "5eb379cd7ffa79b66cc5007c0cf4ae67":
+                print("\rCTRL+C recibido... Cerrando sesion")
+            else:
+                print(f"[{fecha}] {adress[0]} {mensaje}")
 
 emisor_socket= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 emisor_socket.bind(('', msg_port))
@@ -120,7 +151,7 @@ proceso_receptor = threading.Thread(target=receptor)
 # Iniciar los procesos
 proceso_receptor.start()
 proceso_emisor.start()
-
+#While que detiene al proceso Principal
 while (not salir):
     time.sleep(1)
     if salir:
