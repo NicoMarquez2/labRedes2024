@@ -29,7 +29,7 @@ msg_port= int(sys.argv[1])
 auth_ip=sys.argv[2]
 auth_port=int(sys.argv[3])
 
-chunk_tamano=1024
+chunk_tamano=1021
 # Crea el socket 
 client_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -90,20 +90,38 @@ def emisor():
                 operacion,archivo= mensaje.split(' ', 1)
                 archivo_b= open(archivo, "rb")
                 tamano_archivo= os.path.getsize(archivo)
+                i=0
                 if ip == "*":
-                    while True:
-                        chunk = archivo_b.read(chunk_tamano)  
-                        if not chunk:
-                            break
+                    while i <= tamano_archivo  :
+                        archivo_b.seek(i)
+                        chunk = archivo_b.read(chunk_tamano)
                         emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                         ip_receptor = ('<broadcast>', msg_port)
                         msg= b'&file' + b' ' + archivo.encode('utf-8') + b' ' + chunk
                         emisor_socket.sendto(msg, ip_receptor)
+                        emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
+                        i=i+chunk_tamano
+                        time.sleep(0.003)
+                    time.sleep(1)
+                    emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    ip_receptor = ('<broadcast>', msg_port)
                     msg= b'&file' + b' ' + archivo.encode('utf-8') + b' ' + b'Final'
                     emisor_socket.sendto(msg, ip_receptor)
                     emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 0)
                 else:
-                    print()
+                    while i <= tamano_archivo  :
+                        archivo_b.seek(i)
+                        chunk = archivo_b.read(chunk_tamano)
+                        ip_r = socket.gethostbyname(ip)
+                        ip_receptor = (ip_r, msg_port)
+                        msg= b'&file' + b' ' + archivo.encode('utf-8') + b' ' + chunk
+                        emisor_socket.sendto(msg, ip_receptor)
+                        i=i+chunk_tamano
+                        time.sleep(0.005)
+                    time.sleep(1)
+                    msg= b'&file' + b' ' + archivo.encode('utf-8') + b' ' + b'Final'
+                    emisor_socket.sendto(msg, ip_receptor)
+
             else:
                 if ip == "*":
                     emisor_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -123,18 +141,22 @@ def receptor():
     while not salir:
         if salir:
             break
-        msg, adress = emisor_socket.recvfrom(1024)
-        mensaje = msg.decode("utf-8")
-        if "&file" in mensaje:
-            tipo,msg = mensaje.split(' ', 1)
-            archivo,chunk=msg.split(' ', 1)
-            archivo_destino_abierto = open(archivo, 'wb')
-            if(chunk != "Final"):
-                chunk2= chunk.encode("utf-8")
-                archivo_destino_abierto.write(chunk2)
+        msg, adress = emisor_socket.recvfrom(4096)
+        test=b'&file'
+        if test in msg:
+            tipo,mensaje = msg.split(b' ', 1)
+            archivo,chunk=mensaje.split(b' ', 1)
+            archivo=archivo.decode("utf-8")
+            archivo= "n_" + archivo
+            if not os.path.exists(archivo):
+                archivo_destino_abierto = open(archivo, 'wb')
+            if(chunk != b'Final'):
+                archivo_destino_abierto.write(chunk)
             else:
+                print("RECIBI ARCHIVO")
                 archivo_destino_abierto.close()
         else:
+            mensaje = msg.decode("utf-8")
             fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
             if mensaje == "5eb379cd7ffa79b66cc5007c0cf4ae67":
                 print("\rCTRL+C recibido... Cerrando sesion")
